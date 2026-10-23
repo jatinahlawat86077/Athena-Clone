@@ -3,7 +3,6 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-// Set test environment
 process.env.EXAMINER_PASSWORD = 'test-secret-password-123';
 process.env.PORT = '3001';
 
@@ -52,189 +51,287 @@ function request(method, pathName, headers = {}, body = null) {
   });
 }
 
-async function runTests() {
-  console.log('--- Starting Backend Verification Tests ---');
+async function runComprehensiveTests() {
+  console.log('====================================================');
+  console.log('🚀 ALSI ATHENA — BACKEND ACCEPTANCE CHECKS SUITE');
+  console.log('====================================================');
 
-  // Start server on 3001
   server = app.listen(3001);
   await new Promise((resolve) => setTimeout(resolve, 200));
 
   try {
-    // 1. Examiner Auth Tests
-    console.log('[1/7] Testing Examiner Authentication...');
+    // -------------------------------------------------------------
+    // Check 1: Examiner Authentication & Authorization
+    // -------------------------------------------------------------
+    console.log('[Check 1] Examiner Authentication (401, 503, 200)...');
+    
+    // Missing header
     const noAuth = await request('GET', '/examiner/sessions');
-    assert.strictEqual(noAuth.status, 401, 'Should reject unauthenticated examiner request with 401');
+    assert.strictEqual(noAuth.status, 401, 'Missing password header must return 401');
 
+    // Wrong password header
     const wrongAuth = await request('GET', '/examiner/sessions', {
-      'x-examiner-password': 'wrong-password'
+      'x-examiner-password': 'invalid-password'
     });
-    assert.strictEqual(wrongAuth.status, 401, 'Should reject wrong password with 401');
+    assert.strictEqual(wrongAuth.status, 401, 'Invalid password header must return 401');
 
-    const goodAuth = await request('GET', '/examiner/sessions', {
+    // Valid password
+    const validAuth = await request('GET', '/examiner/sessions', {
       'x-examiner-password': 'test-secret-password-123'
     });
-    assert.strictEqual(goodAuth.status, 200, 'Should accept valid examiner password with 200');
-    assert(Array.isArray(goodAuth.body), 'Examiner sessions should be an array');
+    assert.strictEqual(validAuth.status, 200, 'Valid password header must return 200');
+    assert(Array.isArray(validAuth.body), 'Sessions must be returned as array');
 
-    // 2. Start two sessions & verify question randomization and omission of correctAnswer
-    console.log('[2/7] Testing Session Start & Question Randomization...');
-    const ses1Res = await request('POST', '/exam/start', {}, { userId: 'student_1', name: 'Alice Smith' });
-    assert.strictEqual(ses1Res.status, 201, 'Start session 1 should succeed');
-    const ses1Id = ses1Res.body.sessionId;
-    assert(ses1Res.body.endsAt, 'Session should have endsAt');
+    // Test 503 when EXAMINER_PASSWORD is unset
+    const savedPassword = process.env.EXAMINER_PASSWORD;
+    delete process.env.EXAMINER_PASSWORD;
+    const unconfiguredAuth = await request('GET', '/examiner/sessions', {
+      'x-examiner-password': 'test-secret-password-123'
+    });
+    assert.strictEqual(unconfiguredAuth.status, 503, 'Unconfigured password must return 503');
+    process.env.EXAMINER_PASSWORD = savedPassword; // Restore
 
-    const ses2Res = await request('POST', '/exam/start', {}, { userId: 'student_2', name: 'Bob Jones' });
-    assert.strictEqual(ses2Res.status, 201, 'Start session 2 should succeed');
-    const ses2Id = ses2Res.body.sessionId;
+    // -------------------------------------------------------------
+    // Check 2: Session Creation & Question Randomization
+    // -------------------------------------------------------------
+    console.log('[Check 2] Session Creation & Question Randomization...');
+    const s1 = await request('POST', '/exam/start', {}, { userId: 'STU-001', name: 'Student One' });
+    assert.strictEqual(s1.status, 201);
+    assert(s1.body.sessionId);
+    assert.strictEqual(s1.body.durationSeconds, 600);
+    assert(s1.body.endsAt);
 
-    const q1Res = await request('GET', `/exam/session/${ses1Id}/questions`);
-    assert.strictEqual(q1Res.status, 200);
-    const q2Res = await request('GET', `/exam/session/${ses2Id}/questions`);
-    assert.strictEqual(q2Res.status, 200);
+    const s2 = await request('POST', '/exam/start', {}, { userId: 'STU-002', name: 'Student Two' });
+    assert.strictEqual(s2.status, 201);
 
-    // Verify correctAnswer is omitted
-    for (const q of q1Res.body) {
-      assert.strictEqual(q.correctAnswer, undefined, 'Student questions MUST NOT include correctAnswer');
-      assert(q.id && q.question && Array.isArray(q.options) && q.options.length === 4);
-    }
+    // Fetch questions for both sessions
+    const s1Questions = await request('GET', `/exam/session/${s1.body.sessionId}/questions`);
+    const s2Questions = await request('GET', `/exam/session/${s2.body.sessionId}/questions`);
+    assert.strictEqual(s1Questions.status, 200);
+    assert.strictEqual(s2Questions.status, 200);
 
     // Verify stable per-session order
-    const q1ResRepeat = await request('GET', `/exam/session/${ses1Id}/questions`);
-    const q1Ids = q1Res.body.map((q) => q.id);
-    const q1RepeatIds = q1ResRepeat.body.map((q) => q.id);
-    assert.deepStrictEqual(q1Ids, q1RepeatIds, 'Questions order must be stable per session');
+    const s1QuestionsRepeat = await request('GET', `/exam/session/${s1.body.sessionId}/questions`);
+    assert.deepStrictEqual(
+      s1Questions.body.map((q) => q.id),
+      s1QuestionsRepeat.body.map((q) => q.id),
+      'Question order must be stable per session'
+    );
 
-    // Verify examiner questions include correctAnswer
-    const exQuestionsRes = await request('GET', '/examiner/questions', {
-      'x-examiner-password': 'test-secret-password-123'
-    });
-    assert.strictEqual(exQuestionsRes.status, 200);
-    for (const q of exQuestionsRes.body) {
-      assert(typeof q.correctAnswer === 'number', 'Examiner questions MUST include correctAnswer');
+    // -------------------------------------------------------------
+    // Check 3: Student Question Responses Omit correctAnswer; Examiner Includes It
+    // -------------------------------------------------------------
+    console.log('[Check 3] Question Privacy: Student vs Examiner payloads...');
+    for (const q of s1Questions.body) {
+      assert.strictEqual(q.correctAnswer, undefined, 'Student payload MUST NOT contain correctAnswer');
+      assert.strictEqual(typeof q.id, 'number');
+      assert.strictEqual(typeof q.question, 'string');
+      assert(Array.isArray(q.options) && q.options.length === 4);
     }
 
-    // 3. Testing Answer submission & scoring
-    console.log('[3/7] Testing Answer Scoring & Validation...');
-    const firstQ = q1Res.body[0];
-    const exQ = exQuestionsRes.body.find((q) => q.id === firstQ.id);
-
-    // Submit correct answer
-    const ans1Res = await request('POST', '/exam/answer', {}, {
-      sessionId: ses1Id,
-      questionId: firstQ.id,
-      selectedAnswer: exQ.correctAnswer
+    const exQuestions = await request('GET', '/examiner/questions', {
+      'x-examiner-password': 'test-secret-password-123'
     });
-    assert.strictEqual(ans1Res.status, 200);
-    assert.strictEqual(ans1Res.body.attempted, 1);
-    assert.strictEqual(ans1Res.body.correct, 1);
-    assert.strictEqual(ans1Res.body.wrong, 0);
+    assert.strictEqual(exQuestions.status, 200);
+    for (const q of exQuestions.body) {
+      assert(
+        typeof q.correctAnswer === 'number' && q.correctAnswer >= 0 && q.correctAnswer <= 3,
+        'Examiner payload MUST include correctAnswer (0-3)'
+      );
+    }
 
-    // Reject duplicate answer
-    const dupRes = await request('POST', '/exam/answer', {}, {
-      sessionId: ses1Id,
-      questionId: firstQ.id,
-      selectedAnswer: exQ.correctAnswer
+    // Public MCQ endpoints also omit correctAnswer
+    const publicAll = await request('GET', '/exam/mcq');
+    assert.strictEqual(publicAll.status, 200);
+    assert.strictEqual(publicAll.body[0].correctAnswer, undefined);
+
+    const publicSingle = await request('GET', `/exam/mcq/${publicAll.body[0].id}`);
+    assert.strictEqual(publicSingle.status, 200);
+    assert.strictEqual(publicSingle.body.correctAnswer, undefined);
+
+    // -------------------------------------------------------------
+    // Check 4: Answer Validation, Scoring & Expiration (409)
+    // -------------------------------------------------------------
+    console.log('[Check 4] Answer Validation, Scoring & Expiration...');
+    const qTarget = s1Questions.body[0];
+    const targetBankQ = exQuestions.body.find((q) => q.id === qTarget.id);
+
+    // 1. Submit correct answer
+    const ansCorrect = await request('POST', '/exam/answer', {}, {
+      sessionId: s1.body.sessionId,
+      questionId: qTarget.id,
+      selectedAnswer: targetBankQ.correctAnswer
     });
-    assert.strictEqual(dupRes.status, 400, 'Duplicate answer must be rejected with 400');
+    assert.strictEqual(ansCorrect.status, 200);
+    assert.strictEqual(ansCorrect.body.attempted, 1);
+    assert.strictEqual(ansCorrect.body.correct, 1);
+    assert.strictEqual(ansCorrect.body.wrong, 0);
 
-    // Reject unassigned question
-    const unassignedRes = await request('POST', '/exam/answer', {}, {
-      sessionId: ses1Id,
-      questionId: 99999,
+    // 2. Reject duplicate answer
+    const ansDup = await request('POST', '/exam/answer', {}, {
+      sessionId: s1.body.sessionId,
+      questionId: qTarget.id,
+      selectedAnswer: targetBankQ.correctAnswer
+    });
+    assert.strictEqual(ansDup.status, 400, 'Duplicate answer must return 400');
+
+    // 3. Reject unassigned question
+    const ansUnassigned = await request('POST', '/exam/answer', {}, {
+      sessionId: s1.body.sessionId,
+      questionId: 999999,
       selectedAnswer: 0
     });
-    assert.strictEqual(unassignedRes.status, 400, 'Unassigned question must be rejected with 400');
+    assert.strictEqual(ansUnassigned.status, 400, 'Unassigned question must return 400');
 
-    // Reject invalid option index
-    const secondQ = q1Res.body[1];
-    const invalidOptRes = await request('POST', '/exam/answer', {}, {
-      sessionId: ses1Id,
-      questionId: secondQ.id,
-      selectedAnswer: 5
+    // 4. Reject out of bounds option index
+    const ansOOB = await request('POST', '/exam/answer', {}, {
+      sessionId: s1.body.sessionId,
+      questionId: s1Questions.body[1].id,
+      selectedAnswer: 4
     });
-    assert.strictEqual(invalidOptRes.status, 400, 'Option index > 3 must be rejected with 400');
+    assert.strictEqual(ansOOB.status, 400, 'Option index > 3 must return 400');
 
-    // Submit wrong answer
-    const wrongOpt = (exQuestionsRes.body.find((q) => q.id === secondQ.id).correctAnswer + 1) % 4;
-    const ans2Res = await request('POST', '/exam/answer', {}, {
-      sessionId: ses1Id,
-      questionId: secondQ.id,
+    // 5. Submit incorrect answer
+    const wrongOpt = (exQuestions.body.find((q) => q.id === s1Questions.body[1].id).correctAnswer + 1) % 4;
+    const ansWrong = await request('POST', '/exam/answer', {}, {
+      sessionId: s1.body.sessionId,
+      questionId: s1Questions.body[1].id,
       selectedAnswer: wrongOpt
     });
-    assert.strictEqual(ans2Res.status, 200);
-    assert.strictEqual(ans2Res.body.attempted, 2);
-    assert.strictEqual(ans2Res.body.correct, 1);
-    assert.strictEqual(ans2Res.body.wrong, 1);
+    assert.strictEqual(ansWrong.status, 200);
+    assert.strictEqual(ansWrong.body.attempted, 2);
+    assert.strictEqual(ansWrong.body.correct, 1);
+    assert.strictEqual(ansWrong.body.wrong, 1);
 
-    // 4. Testing Proctoring Events
-    console.log('[4/7] Testing Proctoring Events...');
-    const evt1 = await request('POST', '/exam/proctoring-event', {}, {
-      sessionId: ses1Id,
+    // 6. Test Deadline Expiration -> 409
+    console.log('   Testing Deadline Expiration on answer payload...');
+    // Create an expired session directly in sessions.json
+    const sessionsPath = path.join(__dirname, '..', 'backend', 'data', 'sessions.json');
+    const diskSessions = JSON.parse(fs.readFileSync(sessionsPath, 'utf-8'));
+    const expiredSessionId = 'expired_ses_test_123';
+    diskSessions.push({
+      sessionId: expiredSessionId,
+      userId: 'STU-EXPIRED',
+      name: 'Expired Student',
+      startedAt: new Date(Date.now() - 700000).toISOString(),
+      durationSeconds: 600,
+      endsAt: new Date(Date.now() - 100000).toISOString(), // expired 100s ago
+      submittedAt: null,
+      status: 'in-progress',
+      attempted: 0,
+      correct: 0,
+      wrong: 0,
+      answers: [],
+      questionIds: [1, 2, 3],
+      proctoringEvents: []
+    });
+    fs.writeFileSync(sessionsPath, JSON.stringify(diskSessions, null, 2));
+
+    const expiredAnsRes = await request('POST', '/exam/answer', {}, {
+      sessionId: expiredSessionId,
+      questionId: 1,
+      selectedAnswer: 0
+    });
+    assert.strictEqual(expiredAnsRes.status, 409, 'Expired answer must return 409 Conflict');
+    assert(expiredAnsRes.body.result, 'Expired response must include final saved result');
+    assert.strictEqual(expiredAnsRes.body.result.attempted, 0);
+
+    // Verify session is now marked submitted on disk
+    const updatedSessions = JSON.parse(fs.readFileSync(sessionsPath, 'utf-8'));
+    const expiredCheck = updatedSessions.find((s) => s.sessionId === expiredSessionId);
+    assert.strictEqual(expiredCheck.status, 'submitted');
+    assert(expiredCheck.submittedAt);
+
+    // Subsequent answers to that submitted session are rejected
+    const postExpiredAns = await request('POST', '/exam/answer', {}, {
+      sessionId: expiredSessionId,
+      questionId: 2,
+      selectedAnswer: 0
+    });
+    assert.strictEqual(postExpiredAns.status, 400, 'Answer to submitted session must return 400');
+
+    // -------------------------------------------------------------
+    // Check 5: Proctoring Telemetry
+    // -------------------------------------------------------------
+    console.log('[Check 5] Proctoring Telemetry Events...');
+    const allowedTypes = ['fullscreen-exit', 'focus-loss', 'camera-unavailable', 'snapshot-failure'];
+
+    for (const evtType of allowedTypes) {
+      const evtRes = await request('POST', '/exam/proctoring-event', {}, {
+        sessionId: s1.body.sessionId,
+        type: evtType
+      });
+      assert.strictEqual(evtRes.status, 200, `Allowed event '${evtType}' must return 200`);
+    }
+
+    // Disallowed event type
+    const badEvt = await request('POST', '/exam/proctoring-event', {}, {
+      sessionId: s1.body.sessionId,
+      type: 'user-cheated'
+    });
+    assert.strictEqual(badEvt.status, 400, 'Disallowed event type must return 400');
+
+    // Event on expired/submitted session
+    const evtOnExpired = await request('POST', '/exam/proctoring-event', {}, {
+      sessionId: expiredSessionId,
       type: 'focus-loss'
     });
-    assert.strictEqual(evt1.status, 200);
+    assert.strictEqual(evtOnExpired.status, 400, 'Event on non-active session must return 400');
 
-    const evt2 = await request('POST', '/exam/proctoring-event', {}, {
-      sessionId: ses1Id,
-      type: 'fullscreen-exit'
-    });
-    assert.strictEqual(evt2.status, 200);
-
-    const invalidEvt = await request('POST', '/exam/proctoring-event', {}, {
-      sessionId: ses1Id,
-      type: 'suspicious-action'
-    });
-    assert.strictEqual(invalidEvt.status, 400, 'Invalid proctoring event type must be rejected with 400');
-
-    // 5. Active Session Question Edit Protection
-    console.log('[5/7] Testing Active Session Question Edit Protection (409 Conflict)...');
-    const editActiveRes = await request(
+    // -------------------------------------------------------------
+    // Check 6: Active Session Question Edit Lock (409 Conflict)
+    // -------------------------------------------------------------
+    console.log('[Check 6] Active-Session Question Edit Lock (409 Conflict)...');
+    // Session s1 is active and has assigned questions
+    const assignedQId = s1Questions.body[0].id;
+    const editLockRes = await request(
       'PUT',
-      `/examiner/questions/${firstQ.id}`,
+      `/examiner/questions/${assignedQId}`,
       { 'x-examiner-password': 'test-secret-password-123' },
       {
-        question: 'Updated text?',
-        options: ['A', 'B', 'C', 'D'],
+        question: 'Should be rejected because session s1 is active',
+        options: ['Opt 1', 'Opt 2', 'Opt 3', 'Opt 4'],
         correctAnswer: 0
       }
     );
-    assert.strictEqual(editActiveRes.status, 409, 'Editing question in active session must return 409 Conflict');
+    assert.strictEqual(editLockRes.status, 409, 'Editing question in active session must return 409');
 
-    // 6. Submit exam and repeat submit (idempotency)
-    console.log('[6/7] Testing Exam Submission & Idempotency...');
-    const submitRes = await request('POST', '/exam/submit', {}, { sessionId: ses1Id });
+    // -------------------------------------------------------------
+    // Check 7: Submission & Idempotency
+    // -------------------------------------------------------------
+    console.log('[Check 7] Exam Submission & Idempotency...');
+    const submitRes = await request('POST', '/exam/submit', {}, {
+      sessionId: s1.body.sessionId
+    });
     assert.strictEqual(submitRes.status, 200);
     assert.strictEqual(submitRes.body.result.attempted, 2);
     assert.strictEqual(submitRes.body.result.correct, 1);
     assert.strictEqual(submitRes.body.result.wrong, 1);
 
-    // Repeat submit
-    const repeatSubmit = await request('POST', '/exam/submit', {}, { sessionId: ses1Id });
-    assert.strictEqual(repeatSubmit.status, 200);
-    assert.deepStrictEqual(repeatSubmit.body.result, submitRes.body.result, 'Repeat submit returns saved result');
-
-    // Answer after submit is rejected
-    const thirdQ = q1Res.body[2];
-    const postSubmitAns = await request('POST', '/exam/answer', {}, {
-      sessionId: ses1Id,
-      questionId: thirdQ.id,
-      selectedAnswer: 0
+    // Repeat submit returns identical result
+    const repeatRes = await request('POST', '/exam/submit', {}, {
+      sessionId: s1.body.sessionId
     });
-    assert.strictEqual(postSubmitAns.status, 400, 'Answer after submit must be rejected');
+    assert.strictEqual(repeatRes.status, 200);
+    assert.deepStrictEqual(repeatRes.body.result, submitRes.body.result);
 
-    // 7. Verify Safe Examiner Review Schema
-    console.log('[7/7] Testing Safe Examiner Review Data Schema...');
-    const exSessionsRes = await request('GET', '/examiner/sessions', {
+    // -------------------------------------------------------------
+    // Check 8: Safe Examiner Session Review Schema
+    // -------------------------------------------------------------
+    console.log('[Check 8] Safe Examiner Review Data Schema...');
+    const safeReviewRes = await request('GET', '/examiner/sessions', {
       'x-examiner-password': 'test-secret-password-123'
     });
-    assert.strictEqual(exSessionsRes.status, 200);
-    const session1InReview = exSessionsRes.body.find((s) => s.sessionId === ses1Id);
-    assert(session1InReview, 'Session 1 must be present in examiner list');
-    assert.strictEqual(session1InReview.answers, undefined, 'Examiner review MUST NEVER return answer selections');
-    assert.strictEqual(session1InReview.eventCount, 2, 'Event count should match recorded events');
-    assert.strictEqual(session1InReview.proctoringEvents.length, 2);
+    assert.strictEqual(safeReviewRes.status, 200);
+    const auditedS1 = safeReviewRes.body.find((s) => s.sessionId === s1.body.sessionId);
+    assert(auditedS1);
+    assert.strictEqual(auditedS1.answers, undefined, 'Examiner review schema MUST NEVER include answers');
+    assert.strictEqual(auditedS1.eventCount, 4);
+    assert.strictEqual(auditedS1.proctoringEvents.length, 4);
 
-    console.log('✅ ALL BACKEND CONTRACT AND ACCEPTANCE TESTS PASSED!');
+    console.log('====================================================');
+    console.log('🎉 ALL 8 BACKEND ACCEPTANCE CHECKS PASSED PERFECTLY!');
+    console.log('====================================================');
   } finally {
     if (server) {
       server.close();
@@ -242,7 +339,7 @@ async function runTests() {
   }
 }
 
-runTests().catch((err) => {
-  console.error('❌ Test failed:', err);
+runComprehensiveTests().catch((err) => {
+  console.error('\n❌ Acceptance Check Failure:', err);
   process.exit(1);
 });
