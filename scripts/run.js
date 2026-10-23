@@ -16,7 +16,7 @@ let electronProcess = null;
 
 // Clean up child processes on exit
 function cleanup() {
-  console.log('\n[ALSI Athena] Shutting down background services...');
+  console.log('\n[Athena Cloe] Shutting down background services...');
 
   if (electronProcess && !electronProcess.killed) {
     try { electronProcess.kill('SIGTERM'); } catch (e) {}
@@ -85,7 +85,7 @@ function waitForServer(url, timeoutMs = 30000) {
 }
 
 async function main() {
-  console.log(`[ALSI Athena] Initializing ${isAdmin ? 'ADMIN EXAMINER CONSOLE' : 'STUDENT KIOSK'}...`);
+  console.log(`[Athena Cloe] Initializing ${isAdmin ? 'ADMIN EXAMINER CONSOLE' : 'STUDENT KIOSK'}...`);
 
   let examinerPassword = process.env.EXAMINER_PASSWORD || '';
   if (isAdmin) {
@@ -100,7 +100,7 @@ async function main() {
   }
 
   // 1. Start Backend Express Server
-  console.log('[ALSI Athena] Starting Express backend on port 3000...');
+  console.log('[Athena Cloe] Starting Express backend on port 3000...');
   backendProcess = spawn(process.execPath, [path.join(BACKEND_DIR, 'server.js')], {
     cwd: BACKEND_DIR,
     stdio: 'inherit',
@@ -112,13 +112,13 @@ async function main() {
   });
 
   backendProcess.on('error', (err) => {
-    console.error('[ALSI Athena Backend Error]:', err);
+    console.error('[Athena Cloe Backend Error]:', err);
     cleanup();
     process.exit(1);
   });
 
   // 2. Start Vite Development Server
-  console.log('[ALSI Athena] Starting Vite development server on port 5173...');
+  console.log('[Athena Cloe] Starting Vite development server on port 5173...');
   const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
   viteProcess = spawn(npxCmd, ['vite', '--port', '5173', '--strictPort'], {
     cwd: PROCTORING_DIR,
@@ -129,24 +129,24 @@ async function main() {
   });
 
   viteProcess.on('error', (err) => {
-    console.error('[ALSI Athena Vite Error]:', err);
+    console.error('[Athena Cloe Vite Error]:', err);
     cleanup();
     process.exit(1);
   });
 
   // 3. Wait for Vite to be ready
-  console.log('[ALSI Athena] Waiting for Vite development server to become available...');
+  console.log('[Athena Cloe] Waiting for Vite development server to become available...');
   try {
     await waitForServer('http://localhost:5173');
-    console.log('[ALSI Athena] Vite is ready at http://localhost:5173');
+    console.log('[Athena Cloe] Vite is ready at http://localhost:5173');
   } catch (err) {
-    console.error('[ALSI Athena] Failed to connect to Vite:', err.message);
+    console.error('[Athena Cloe] Failed to connect to Vite:', err.message);
     cleanup();
     process.exit(1);
   }
 
   // 4. Launch Electron
-  console.log(`[ALSI Athena] Launching Electron window (${isAdmin ? 'Admin Console' : 'Student Kiosk'})...`);
+  console.log(`[Athena Cloe] Launching Electron window (${isAdmin ? 'Admin Console' : 'Student Kiosk'})...`);
   const electronBinary = require('electron');
   const electronAppPath = path.join(PROCTORING_DIR, 'app', 'app.js');
   const electronArgs = [electronAppPath];
@@ -165,14 +165,14 @@ async function main() {
   });
 
   electronProcess.on('close', (code) => {
-    console.log(`[ALSI Athena] Electron window closed (exit code ${code}). Stopping all child services.`);
+    console.log(`[Athena Cloe] Electron window closed (exit code ${code}). Stopping all child services.`);
     cleanup();
     process.exit(code || 0);
   });
 }
 
 main().catch((err) => {
-  console.error('[ALSI Athena Fatal Error]:', err);
+  console.error('[Athena Cloe Fatal Error]:', err);
   cleanup();
   process.exit(1);
 });

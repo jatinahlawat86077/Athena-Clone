@@ -44,14 +44,14 @@ function createWindow() {
     windowOptions.minHeight = 700;
     windowOptions.fullscreen = false;
     windowOptions.kiosk = false;
-    windowOptions.title = 'ALSI Athena — Examiner Console';
+    windowOptions.title = 'Athena Cloe — Examiner Console';
   } else {
     // Student window: 1000x1000, fullscreen and kiosk mode
     windowOptions.width = 1000;
     windowOptions.height = 1000;
     windowOptions.fullscreen = true;
     windowOptions.kiosk = true;
-    windowOptions.title = 'ALSI Athena — Secure Student Assessment';
+    windowOptions.title = 'Athena Cloe — Secure Student Assessment';
   }
 
   mainWindow = new BrowserWindow(windowOptions);

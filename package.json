@@ -2,7 +2,7 @@
   "name": "alsi-athena",
   "version": "1.0.0",
   "private": true,
-  "description": "ALSI Athena — Classroom-scale secure assessment application",
+  "description": "Athena Cloe — Classroom-scale secure assessment application",
   "workspaces": [
     "backend",
     "proctoring-tool"
@@ -21,6 +21,6 @@
     "electron",
     "kiosk"
   ],
-  "author": "ALSI Athena Team",
+  "author": "Athena Cloe Team",
   "license": "ISC"
 }

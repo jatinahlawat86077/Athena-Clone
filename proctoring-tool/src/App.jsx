@@ -439,7 +439,7 @@ function StudentApp() {
           <div className="brand-section">
             <span className="brand-title">
               <Shield className="w-5 h-5 text-blue-500" />
-              ALSI ATHENA
+              ATHENA CLOE
             </span>
             <span className="brand-badge">SECURE</span>
           </div>
@@ -570,7 +570,7 @@ function StudentApp() {
           <div className="disclaimer-card">
             <AlertTriangle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
             <p>
-              <strong>Observability Notice:</strong> ALSI Athena monitors fullscreen state, application focus, and camera integrity throughout the exam. Recorded events provide reviewable context for examiners; the system does not make automated disqualification decisions.
+              <strong>Observability Notice:</strong> Athena Cloe monitors fullscreen state, application focus, and camera integrity throughout the exam. Recorded events provide reviewable context for examiners; the system does not make automated disqualification decisions.
             </p>
           </div>
 
@@ -619,7 +619,7 @@ function StudentApp() {
           <div className="brand-section">
             <span className="brand-title">
               <Shield className="w-5 h-5 text-blue-500" />
-              ALSI ATHENA
+              ATHENA CLOE
             </span>
             <span className="brand-badge">SECURE</span>
           </div>
@@ -761,7 +761,7 @@ function StudentApp() {
         <div className="brand-section">
           <span className="brand-title">
             <Shield className="w-5 h-5 text-blue-500" />
-            ALSI ATHENA
+            ATHENA CLOE
           </span>
           <span className="brand-badge badge-green">SUBMITTED</span>
         </div>
@@ -1038,7 +1038,7 @@ function ExaminerConsole() {
         <div className="brand-section">
           <span className="brand-title">
             <Shield className="w-5 h-5 text-blue-500" />
-            ALSI ATHENA
+            ATHENA CLOE
           </span>
           <span className="brand-badge">EXAMINER CONSOLE</span>
         </div>

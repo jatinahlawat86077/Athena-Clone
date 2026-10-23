@@ -1,8 +1,8 @@
-# ALSI Athena — Product Constraints & System Specification
+# Athena Cloe — Product Constraints & System Specification
 
 ## 1. Product Philosophy & Proctoring Principles
 
-ALSI Athena communicates **confident control and observability**, rather than treating recorded telemetry as proof of cheating.
+Athena Cloe communicates **confident control and observability**, rather than treating recorded telemetry as proof of cheating.
 
 ### Key Tenets:
 1. **Observations, Not Accusations:**

@@ -53,7 +53,7 @@ function request(method, pathName, headers = {}, body = null) {
 
 async function runComprehensiveTests() {
   console.log('====================================================');
-  console.log('🚀 ALSI ATHENA — BACKEND ACCEPTANCE CHECKS SUITE');
+  console.log('🚀 ATHENA CLOE — BACKEND ACCEPTANCE CHECKS SUITE');
   console.log('====================================================');
 
   server = app.listen(3001);

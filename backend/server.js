@@ -542,8 +542,8 @@ app.put('/examiner/questions/:id', checkExaminerAuth, (req, res) => {
 // Start listening if not running as a required module (e.g., during tests)
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`[ALSI Athena Backend] Listening on port ${PORT}`);
-    console.log(`[ALSI Athena Backend] Data directory: ${DATA_DIR}`);
+    console.log(`[Athena Cloe Backend] Listening on port ${PORT}`);
+    console.log(`[Athena Cloe Backend] Data directory: ${DATA_DIR}`);
   });
 }
 

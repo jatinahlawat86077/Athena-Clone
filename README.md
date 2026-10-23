@@ -1,6 +1,6 @@
-# ALSI Athena — Classroom-Scale Secure Assessment Platform
+# Athena Cloe — Classroom-Scale Secure Assessment Platform
 
-**ALSI Athena** is a secure assessment platform designed for local classroom evaluation. It provides two Electron experiences backed by a single local Express API:
+**Athena Cloe** is a secure assessment platform designed for local classroom evaluation. It provides two Electron experiences backed by a single local Express API:
 
 1. **Student Assessment Kiosk:** A fullscreen, timed multiple-choice exam with camera/fullscreen readiness gates, keyboard navigation, and real-time observability telemetry.
 2. **Examiner Console:** A password-protected administrative interface for reviewing student attempts, auditing observational signals, and managing the question bank.
@@ -100,7 +100,7 @@ The Express server runs on port `3000` with CORS and JSON body parsing.
 
 ## Security Model & Known Scope Limitations
 
-1. **Classroom Demo Environment:** ALSI Athena is engineered for local classroom environments and proctored computer labs.
+1. **Classroom Demo Environment:** Athena Cloe is engineered for local classroom environments and proctored computer labs.
 2. **Persistence Layer:** Flat JSON files (`questions.json`, `sessions.json`) are intentionally used as the lightweight storage layer.
 3. **No Automatic Penalties:** Observational signals (focus loss, fullscreen exit) support human examiner review and are **never** treated as automated proof of cheating.
 4. **Shared Password:** Examiner access uses a shared administrative password provided via environment variable; it is not a multi-tenant identity provider.
