@@ -1,0 +1,7 @@
+node_modules/
+dist/
+proctoring-tool/dist/
+proctoring-tool/app/user-camera-snap/
+.DS_Store
+*.log
+npm-debug.log*

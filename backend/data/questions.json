@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "question": "Which layer of the OSI reference model is responsible for packet routing, logical addressing, and path determination?",
+    "options": [
+      "Data Link Layer",
+      "Network Layer",
+      "Transport Layer",
+      "Session Layer"
+    ],
+    "correctAnswer": 1
+  },
+  {
+    "id": 2,
+    "question": "What is the primary cryptographic purpose of a digital certificate signed by a trusted Certificate Authority (CA)?",
+    "options": [
+      "To bind a public key to an entity's verified identity",
+      "To encrypt data at rest using symmetric key algorithms",
+      "To compress network payloads for low-latency transmission",
+      "To act as a temporary replacement for DNS root servers"
+    ],
+    "correctAnswer": 0
+  },
+  {
+    "id": 3,
+    "question": "In relational database systems, which ACID property ensures that transactions execute without interference from concurrently executing transactions?",
+    "options": [
+      "Atomicity",
+      "Consistency",
+      "Isolation",
+      "Durability"
+    ],
+    "correctAnswer": 2
+  },
+  {
+    "id": 4,
+    "question": "Which algorithm or technique is commonly used to prevent denial-of-service by controlling the rate of incoming API requests?",
+    "options": [
+      "Token Bucket Algorithm",
+      "Dijkstra's Shortest Path",
+      "Rabin-Karp Substring Matching",
+      "Kruskal's Minimum Spanning Tree"
+    ],
+    "correctAnswer": 0
+  },
+  {
+    "id": 5,
+    "question": "In operating systems, what condition occurs when two or more processes are unable to proceed because each is waiting for the other to release a resource?",
+    "options": [
+      "Starvation",
+      "Race Condition",
+      "Deadlock",
+      "Thrashing"
+    ],
+    "correctAnswer": 2
+  },
+  {
+    "id": 6,
+    "question": "What is the primary difference between symmetric and asymmetric encryption?",
+    "options": [
+      "Symmetric uses one shared key; asymmetric uses a public and private key pair",
+      "Symmetric is quantum-resistant; asymmetric is vulnerable to classical brute-force",
+      "Symmetric requires a web browser; asymmetric requires a dedicated hardware token",
+      "Symmetric operates on streams; asymmetric operates exclusively on blocks"
+    ],
+    "correctAnswer": 0
+  },
+  {
+    "id": 7,
+    "question": "Which HTTP status code represents a resource conflict, such as attempting to edit a resource currently locked by an active process?",
+    "options": [
+      "400 Bad Request",
+      "403 Forbidden",
+      "409 Conflict",
+      "422 Unprocessable Entity"
+    ],
+    "correctAnswer": 2
+  },
+  {
+    "id": 8,
+    "question": "Which data structure provides average O(1) time complexity for lookup, insertion, and deletion operations?",
+    "options": [
+      "Balanced Binary Search Tree",
+      "Hash Table",
+      "Doubly Linked List",
+      "B-Tree"
+    ],
+    "correctAnswer": 1
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "name": "alsi-athena",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ALSI Athena — Classroom-scale secure assessment application",
+  "workspaces": [
+    "backend",
+    "proctoring-tool"
+  ],
+  "scripts": {
+    "student": "node scripts/run.js student",
+    "admin": "node scripts/run.js admin",
+    "build": "npm run build --prefix proctoring-tool",
+    "lint": "npm run lint --prefix proctoring-tool",
+    "test:backend": "node test/verify_backend.js"
+  },
+  "keywords": [
+    "alsi-athena",
+    "proctoring",
+    "secure-assessment",
+    "electron",
+    "kiosk"
+  ],
+  "author": "ALSI Athena Team",
+  "license": "ISC"
+}
